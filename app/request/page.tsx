@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useLeague } from '@/lib/providers';
-import { useClientStore } from '@/lib/client-store';
+import { useClientStore, useHydrated } from '@/lib/client-store';
+import { DRAFT_KEYS, clearDraft, loadDraft, saveDraft } from '@/lib/form-draft';
 import { loadRequests, saveRequest } from '@/lib/storage';
 import { submitApplication } from '@/lib/applications';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -47,13 +48,37 @@ const DEMO: Omit<Form, 'division'> = {
 
 const NO_REQUESTS: TeamRequest[] = [];
 
-export default function RequestPage() {
+const isBlank = (value: Form) =>
+  Object.entries(value).every(([key, text]) => key === 'division' || !String(text).trim());
+
+/**
+ * Форма заявки. Как и столик, монтируется с `key` по готовности гидратации,
+ * поэтому черновик подставляется прямо в инициализатор `useState`.
+ */
+function RequestForm({
+  initial,
+  canPersist,
+}: {
+  initial: Form | null;
+  canPersist: boolean;
+}) {
   const { divisions } = useLeague();
-  const [form, setForm] = useState<Form>({ ...EMPTY, division: divisions[0] });
+  const [form, setForm] = useState<Form>(() => ({
+    ...EMPTY,
+    division: divisions[0],
+    ...(initial ?? {}),
+  }));
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: ToastTone } | null>(null);
   const history = useClientStore('requests', loadRequests, NO_REQUESTS);
+
+  // Черновик переживает перезагрузку: заполненный состав обидно терять.
+  useEffect(() => {
+    if (!canPersist) return;
+    if (isBlank(form)) clearDraft(DRAFT_KEYS.teamRequest);
+    else saveDraft(DRAFT_KEYS.teamRequest, form);
+  }, [canPersist, form]);
 
   const showToast = (text: string, tone: ToastTone) => {
     setToast({ text, tone });
@@ -92,6 +117,7 @@ export default function RequestPage() {
 
     // Локальная копия нужна только для списка «мои заявки» в этом браузере.
     saveRequest(result.request);
+    clearDraft(DRAFT_KEYS.teamRequest);
     setForm({ ...EMPTY, division: divisions[0] });
     setErrors({});
     showToast(
@@ -215,6 +241,7 @@ export default function RequestPage() {
             <button
               type="button"
               onClick={() => {
+                clearDraft(DRAFT_KEYS.teamRequest);
                 setForm({ ...EMPTY, division: divisions[0] });
                 setErrors({});
               }}
@@ -281,5 +308,22 @@ export default function RequestPage() {
 
       <Toast text={toast?.text ?? null} tone={toast?.tone} onClose={() => setToast(null)} />
     </section>
+  );
+}
+
+export default function RequestPage() {
+  const hydrated = useHydrated();
+  const draft = useClientStore(
+    'request-draft',
+    () => loadDraft<Form>(DRAFT_KEYS.teamRequest),
+    null,
+  );
+
+  return (
+    <RequestForm
+      key={hydrated ? 'restored' : 'initial'}
+      initial={hydrated ? draft : null}
+      canPersist={hydrated}
+    />
   );
 }

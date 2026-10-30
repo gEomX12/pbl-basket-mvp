@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLeague } from '@/lib/providers';
-import { useClientStore } from '@/lib/client-store';
+import { useClientStore, useHydrated } from '@/lib/client-store';
+import {
+  clearMatchSession,
+  loadMatchSession,
+  saveMatchSession,
+  type MatchSession,
+} from '@/lib/match-session';
 import { appendEvent, clearEvents, truncateEvents, useLiveFeed } from '@/lib/live-feed';
 import { STAGES, TEAMS, createPlayer, rosterOf } from '@/lib/league-data';
 import {
@@ -55,36 +61,55 @@ function buildTeam(name: string): TeamState {
   };
 }
 
-export default function ScorerPage() {
+const RESTORED_NOTICE =
+  'Матч восстановлен после перезагрузки. Часы на паузе — нажмите «Старт», когда продолжите.';
+
+/**
+ * Столик. Монтируется с `key`, завязанным на завершение гидратации, поэтому
+ * все начальные значения берутся из черновика прямо в инициализаторах
+ * `useState` — без синхронизации через эффект.
+ */
+function ScorerDesk({
+  initial,
+  canPersist,
+}: {
+  initial: MatchSession | null;
+  canPersist: boolean;
+}) {
   const router = useRouter();
   const { season, division } = useLeague();
 
-  const [started, setStarted] = useState(false);
-  const [homeName, setHomeName] = useState(TEAMS[0].name);
-  const [awayName, setAwayName] = useState(TEAMS[1].name);
-  const [venue, setVenue] = useState(TEAMS[0].arena);
-  const [stage, setStage] = useState<MatchStage>('regular');
+  const restored = initial?.desk ?? null;
+
+  const [started, setStarted] = useState(() => Boolean(restored));
+  const [homeName, setHomeName] = useState(() => initial?.setup.homeName ?? TEAMS[0].name);
+  const [awayName, setAwayName] = useState(() => initial?.setup.awayName ?? TEAMS[1].name);
+  const [venue, setVenue] = useState(() => initial?.setup.venue ?? TEAMS[0].arena);
+  const [stage, setStage] = useState<MatchStage>(() => initial?.setup.stage ?? 'regular');
   // Сегодняшняя дата доступна только в браузере: при пререндере `new Date()` запрещён.
   const today = useClientStore('today', todayIso, '');
-  const [dateDraft, setDateDraft] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState<string | null>(() => initial?.setup.date || null);
   const date = dateDraft ?? today;
-  const [time, setTime] = useState('19:00');
+  const [time, setTime] = useState(() => initial?.setup.time ?? '19:00');
 
-  const [home, setHome] = useState<TeamState>(() => buildTeam(TEAMS[0].name));
-  const [away, setAway] = useState<TeamState>(() => buildTeam(TEAMS[1].name));
-  const [onCourt, setOnCourt] = useState<Record<Side, string[]>>({ home: [], away: [] });
+  const [home, setHome] = useState<TeamState>(() => restored?.home ?? buildTeam(TEAMS[0].name));
+  const [away, setAway] = useState<TeamState>(() => restored?.away ?? buildTeam(TEAMS[1].name));
+  const [onCourt, setOnCourt] = useState<Record<Side, string[]>>(
+    () => restored?.onCourt ?? { home: [], away: [] },
+  );
 
-  const [quarter, setQuarter] = useState(1);
-  const [timeLeft, setTimeLeft] = useState(PERIOD_SECONDS);
+  const [quarter, setQuarter] = useState(() => restored?.quarter ?? 1);
+  const [timeLeft, setTimeLeft] = useState(() => restored?.timeLeft ?? PERIOD_SECONDS);
+  // После перезагрузки часы всегда стоят: когда продолжать — решает судья.
   const [running, setRunning] = useState(false);
-  const [possession, setPossession] = useState<Side | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [possession, setPossession] = useState<Side | null>(() => restored?.possession ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null);
+  const [history, setHistory] = useState<string[]>(() => restored?.history ?? []);
+  const [notice, setNotice] = useState<string | null>(() => (restored ? RESTORED_NOTICE : null));
 
   // Идентификатор сессии = будущий id матча: лента событий сразу привязана
   // к записи, которая появится в архиве после финальной сирены.
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(() => restored?.sessionId ?? null);
   const events = useLiveFeed(sessionId);
 
   /* ----------------------------- Таймер ----------------------------- */
@@ -115,6 +140,24 @@ export default function ScorerPage() {
 
     return () => window.clearTimeout(timer);
   }, [running, timeLeft, onCourt]);
+
+  /* ------------------------ Автосохранение -------------------------- */
+
+  // Пишем черновик на каждое изменение. До конца гидратации сохранять нельзя:
+  // в этот момент состояние ещё начальное и затёрло бы восстановленный матч.
+  useEffect(() => {
+    if (!canPersist) return;
+    saveMatchSession({
+      setup: { homeName, awayName, venue, stage, date, time },
+      desk:
+        started && sessionId
+          ? { sessionId, home, away, onCourt, quarter, timeLeft, possession, selectedId, history }
+          : null,
+    });
+  }, [
+    canPersist, started, sessionId, homeName, awayName, venue, stage, date, time,
+    home, away, onCourt, quarter, timeLeft, possession, selectedId, history,
+  ]);
 
   /* --------------------------- Утилиты ------------------------------ */
 
@@ -316,7 +359,25 @@ export default function ScorerPage() {
       away: { ...away, quarters: away.quarters.slice(0, Math.max(4, quarter)) },
     };
     saveMatch(match);
+    clearMatchSession();
     router.push(`/matches/${encodeURIComponent(match.id)}`);
+  };
+
+  /** «Новый матч»: сбрасываем счёт, таймер и черновик, настройки оставляем. */
+  const resetMatch = () => {
+    clearMatchSession();
+    setStarted(false);
+    setSessionId(null);
+    setHome(buildTeam(homeName));
+    setAway(buildTeam(awayName));
+    setOnCourt({ home: [], away: [] });
+    setHistory([]);
+    setQuarter(1);
+    setTimeLeft(PERIOD_SECONDS);
+    setRunning(false);
+    setPossession(null);
+    setSelectedId(null);
+    setNotice(null);
   };
 
   /* -------------------------- Настройка ----------------------------- */
@@ -544,7 +605,7 @@ export default function ScorerPage() {
           <button type="button" onClick={undo} disabled={history.length === 0} className={btn.ghost}>
             ↩ Отменить
           </button>
-          <button type="button" onClick={() => setStarted(false)} className={btn.ghost}>
+          <button type="button" onClick={resetMatch} className={btn.ghost}>
             Новый матч
           </button>
           <button type="button" onClick={finish} className={btn.primary}>
@@ -686,5 +747,23 @@ export default function ScorerPage() {
         />
       </div>
     </section>
+  );
+}
+
+/**
+ * До конца гидратации отдаём ту же разметку, что и сервер (черновик ещё не
+ * прочитан), и только потом перемонтируем столик с восстановленным матчем.
+ * Так состояние переживает F5 без ошибки гидратации.
+ */
+export default function ScorerPage() {
+  const hydrated = useHydrated();
+  const session = useClientStore('match-session', loadMatchSession, null);
+
+  return (
+    <ScorerDesk
+      key={hydrated ? 'restored' : 'initial'}
+      initial={hydrated ? session : null}
+      canPersist={hydrated}
+    />
   );
 }
