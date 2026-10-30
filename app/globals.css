@@ -171,3 +171,27 @@ html[data-theme='dark'] .theme-opt-dark {
   background: var(--accent);
   color: var(--accent-fg);
 }
+
+/*
+  Мягкое свечение акцентным цветом — для кнопки входа.
+  color-mix берёт тот же --accent, поэтому оттенок совпадает в обеих темах
+  и автоматически меняется вместе с ней.
+*/
+.glow-accent {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 3px 14px -4px color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: box-shadow 0.3s ease, opacity 0.2s ease;
+}
+.glow-accent:hover,
+.glow-accent:focus-visible {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 5px 22px -4px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-accent {
+    transition: none;
+  }
+}

@@ -162,7 +162,7 @@ export default function Header() {
             <Link
               href="/login"
               onClick={closeAll}
-              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-accentfg transition hover:opacity-90"
+              className="glow-accent rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-accentfg hover:opacity-95"
             >
               Вход
             </Link>
