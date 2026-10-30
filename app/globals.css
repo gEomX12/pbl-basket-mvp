@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+/* ---------- Светлая тема (по умолчанию) ---------- */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --line: #dfe3ea;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --accent: #ef6c1f;
+  --accent-soft: #fdeee3;
+  --accent-fg: #ffffff;
+  --win: #15803d;
+  --loss: #b91c1c;
+  --live: #dc2626;
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px -16px rgb(15 23 42 / 0.25);
+}
+
+/* ---------- Тёмная тема ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171d;
+    --surface: #1b1e26;
+    --surface-2: #232733;
+    --line: #2e3340;
+    --fg: #e8eaef;
+    --muted: #8d95a6;
+    --accent: #f97b2f;
+    --accent-soft: #33210f;
+    --accent-fg: #15171d;
+    --win: #4ade80;
+    --loss: #f87171;
+    --live: #f05252;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -16px rgb(0 0 0 / 0.8);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15171d;
+  --surface: #1b1e26;
+  --surface-2: #232733;
+  --line: #2e3340;
+  --fg: #e8eaef;
+  --muted: #8d95a6;
+  --accent: #f97b2f;
+  --accent-soft: #33210f;
+  --accent-fg: #15171d;
+  --win: #4ade80;
+  --loss: #f87171;
+  --live: #f05252;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -16px rgb(0 0 0 / 0.8);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accentsoft: var(--accent-soft);
+  --color-accentfg: var(--accent-fg);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
+  --color-live: var(--live);
+}
+
+html {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Поля ввода наследуют тему */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  box-shadow: var(--shadow);
+}
+
+.scroll-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: livePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes feedIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.feed-in {
+  animation: feedIn 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-in,
+  .live-dot {
+    animation: none;
+  }
+}
+
+/*
+  Переключатель темы рисуется одинаково на сервере и клиенте: обе иконки
+  всегда в разметке, нужную показывает CSS по атрибуту data-theme, который
+  инлайн-скрипт проставляет до первой отрисовки. Так расхождение при
+  гидратации невозможно в принципе.
+*/
+.icon-sun {
+  display: none;
+}
+.icon-moon {
+  display: block;
+}
+html[data-theme='dark'] .icon-sun {
+  display: block;
+}
+html[data-theme='dark'] .icon-moon {
+  display: none;
+}
+
+/* Активная кнопка выбора темы в настройках — тоже без участия JS. */
+.theme-opt {
+  color: var(--muted);
+}
+html[data-theme='light'] .theme-opt-light,
+html[data-theme='dark'] .theme-opt-dark {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
