@@ -2,31 +2,14 @@
 
 import Link from 'next/link';
 import { Suspense, useState } from 'react';
-import { useAuth, useLeague, useTheme } from '@/lib/providers';
+import { useAuth, useLeague } from '@/lib/providers';
 import GlobalSearch from '@/components/GlobalSearch';
 import BrandLogo from '@/components/BrandLogo';
 import NavLinks, { NavLinksSkeleton } from '@/components/NavLinks';
+import ThemeToggle from '@/components/ThemeToggle';
 import { CONTACT_TELEGRAM_URL } from '@/components/Footer';
 
-function SunIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="icon-sun h-4 w-4">
-      <circle cx="12" cy="12" r="4" />
-      <path strokeLinecap="round" d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="icon-moon h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
-    </svg>
-  );
-}
-
 export default function Header() {
-  const { toggle } = useTheme();
   const { season, setSeason, seasons, division, setDivision, divisions } = useLeague();
   const { account, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -109,17 +92,7 @@ export default function Header() {
             Связаться
           </a>
 
-          {/* Обе иконки всегда в разметке — видимость решает CSS по data-theme. */}
-          <button
-            type="button"
-            onClick={toggle}
-            title="Переключить тему"
-            aria-label="Переключить тему"
-            className="rounded-lg border border-line p-2 text-muted transition hover:border-accent hover:text-accent"
-          >
-            <SunIcon />
-            <MoonIcon />
-          </button>
+          <ThemeToggle />
 
           {account ? (
             <div className="relative">
