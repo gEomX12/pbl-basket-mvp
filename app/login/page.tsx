@@ -3,208 +3,125 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { useAuth, useLeague } from '@/lib/providers';
-import { TEAMS } from '@/lib/league-data';
-import { Card, SectionTitle, Tabs, btn, inputClass, labelClass } from '@/components/ui';
-import type { ProfileRole } from '@/types/match';
+import {
+  DEMO_JUDGE,
+  judgeAuthMode,
+  signInJudge,
+  signOutJudge,
+  useJudge,
+} from '@/lib/judge-auth';
+import { Card, RouteFallback, SectionTitle, btn, inputClass, labelClass } from '@/components/ui';
 
-type Mode = 'signin' | 'signup';
-
-const ROLES: { value: ProfileRole; label: string }[] = [
-  { value: 'fan', label: 'Болельщик' },
-  { value: 'coach', label: 'Тренер' },
-  { value: 'scorer', label: 'Оператор столика' },
-];
-
+/** Вход только для судей: открывает доступ к судейскому столику. */
 export default function LoginPage() {
   const router = useRouter();
-  const { account, signIn, signUp, signOut } = useAuth();
-  const { divisions } = useLeague();
-  const [mode, setMode] = useState<Mode>('signin');
-  const [login, setLogin] = useState('');
+  const judge = useJudge();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [repeat, setRepeat] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [role, setRole] = useState<ProfileRole>('fan');
-  const [favoriteTeam, setFavoriteTeam] = useState(TEAMS[0].name);
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
 
-  if (account) {
+  if (judge.status === 'loading') return <RouteFallback />;
+
+  if (judge.status === 'signed-in') {
     return (
       <section className="mx-auto max-w-md">
-        <SectionTitle title="Вы уже вошли" subtitle={`Аккаунт: ${account.displayName}`} />
+        <SectionTitle title="Вы вошли как судья" subtitle={judge.judge.name} />
         <Card className="space-y-3 p-5">
           <p className="text-sm text-muted">
-            Логин <b className="text-fg">{account.login}</b> · роль{' '}
-            {ROLES.find((item) => item.value === account.role)?.label}
+            E-mail <b className="text-fg">{judge.judge.email}</b>
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href={`/profile/${encodeURIComponent(account.login)}`} className={btn.primary}>
-              Моя страница
-            </Link>
-            <Link href="/settings" className={btn.ghost}>Настройки</Link>
-            <button type="button" onClick={signOut} className={btn.ghost}>Выход из аккаунта</button>
+            <Link href="/scorer" className={btn.primary}>Открыть судейский столик</Link>
+            <button type="button" onClick={() => void signOutJudge()} className={btn.ghost}>
+              Выйти
+            </button>
           </div>
         </Card>
       </section>
     );
   }
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (sending) return;
     setError('');
-
-    if (mode === 'signin') {
-      const result = signIn(login, password);
-      if (!result.ok) {
-        setError(result.error ?? 'Ошибка при запросе');
-        return;
-      }
-      router.push(`/profile/${encodeURIComponent(login.trim())}`);
+    if (!email.trim() || !password) {
+      setError('Введите e-mail и пароль');
       return;
     }
-
-    if (login.trim().length < 3) {
-      setError('Логин — минимум 3 символа');
-      return;
-    }
-    if (password.length < 4) {
-      setError('Пароль — минимум 4 символа');
-      return;
-    }
-    if (password !== repeat) {
-      setError('Пароли не совпадают');
-      return;
-    }
-
-    const result = signUp({
-      login: login.trim(),
-      password,
-      displayName: displayName.trim() || login.trim(),
-      role,
-      club: favoriteTeam,
-      favoriteTeam,
-    });
+    setSending(true);
+    const result = await signInJudge(email, password);
+    setSending(false);
     if (!result.ok) {
-      setError(result.error ?? 'Ошибка при запросе');
+      setError(result.error);
       return;
     }
-    router.push(`/profile/${encodeURIComponent(login.trim())}`);
+    router.push('/scorer');
   };
 
   return (
     <section className="mx-auto max-w-md">
       <SectionTitle
-        title={mode === 'signin' ? 'Вход в аккаунт' : 'Регистрация'}
-        subtitle="Аккаунт нужен для избранных команд и судейского столика"
+        title="Вход для судей"
+        subtitle="Доступ к судейскому столику. Аккаунты судьям выдаёт администратор лиги."
       />
 
-      <div className="mb-4">
-        <Tabs
-          value={mode}
-          onChange={(value) => {
-            setMode(value);
-            setError('');
-          }}
-          options={[
-            { value: 'signin', label: 'Вход' },
-            { value: 'signup', label: 'Регистрация' },
-          ]}
-        />
-      </div>
-
-      <form onSubmit={submit} noValidate>
-        <Card className="space-y-4 p-5">
-          <label className="block space-y-1.5">
-            <span className={labelClass}>{mode === 'signin' ? 'Логин' : 'Придумайте логин'}</span>
-            <input
-              value={login}
-              onChange={(event) => setLogin(event.target.value)}
-              className={inputClass}
-              autoComplete="username"
-              placeholder="Ваш логин"
-            />
-          </label>
-
-          {mode === 'signup' && (
+      {judgeAuthMode === 'disabled' ? (
+        <Card className="p-5">
+          <p className="text-sm text-muted">
+            Вход для судей пока не настроен. Обратитесь к администратору лиги.
+          </p>
+        </Card>
+      ) : (
+        <form onSubmit={submit} noValidate>
+          <Card className="space-y-4 p-5">
             <label className="block space-y-1.5">
-              <span className={labelClass}>Как вас показывать</span>
+              <span className={labelClass}>E-mail</span>
               <input
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 className={inputClass}
-                placeholder="Имя и фамилия"
+                autoComplete="username"
+                inputMode="email"
+                placeholder="judge@example.com"
               />
             </label>
-          )}
 
-          <label className="block space-y-1.5">
-            <span className={labelClass}>Пароль</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className={inputClass}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            />
-          </label>
+            <label className="block space-y-1.5">
+              <span className={labelClass}>Пароль</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className={inputClass}
+                autoComplete="current-password"
+              />
+            </label>
 
-          {mode === 'signup' && (
-            <>
-              <label className="block space-y-1.5">
-                <span className={labelClass}>Повторите пароль</span>
-                <input
-                  type="password"
-                  value={repeat}
-                  onChange={(event) => setRepeat(event.target.value)}
-                  className={inputClass}
-                  autoComplete="new-password"
-                />
-              </label>
+            {error && (
+              <p className="rounded-lg bg-loss/10 px-3 py-2 text-xs font-bold text-loss">{error}</p>
+            )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className={labelClass}>Роль</span>
-                  <select
-                    value={role}
-                    onChange={(event) => setRole(event.target.value as ProfileRole)}
-                    className={inputClass}
-                  >
-                    {ROLES.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </label>
+            <button type="submit" disabled={sending} className={`${btn.primary} w-full`}>
+              {sending ? 'Входим…' : 'Войти'}
+            </button>
 
-                <label className="block space-y-1.5">
-                  <span className={labelClass}>Команда</span>
-                  <select
-                    value={favoriteTeam}
-                    onChange={(event) => setFavoriteTeam(event.target.value)}
-                    className={inputClass}
-                  >
-                    {TEAMS.map((item) => (
-                      <option key={item.name} value={item.name}>{item.name}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <p className="text-[11px] text-muted">
-                Дивизионы лиги: {divisions.join(', ')}. Данные аккаунта хранятся только в вашем браузере.
+            {judgeAuthMode === 'demo' && (
+              <p className="rounded-lg bg-surface2 px-3 py-2 text-[11px] text-muted">
+                Режим разработки без Supabase: демо-вход{' '}
+                <b className="text-fg">{DEMO_JUDGE.email}</b> / <b className="text-fg">{DEMO_JUDGE.password}</b>
               </p>
-            </>
-          )}
+            )}
+          </Card>
+        </form>
+      )}
 
-          {error && (
-            <p className="rounded-lg bg-loss/10 px-3 py-2 text-xs font-bold text-loss">{error}</p>
-          )}
-
-          <button type="submit" className={`${btn.primary} w-full`}>
-            {mode === 'signin' ? 'Войти' : 'Зарегистрироваться'}
-          </button>
-        </Card>
-      </form>
+      <p className="mt-6 text-center text-xs text-muted">
+        Хотите заявить команду? Регистрация не нужна —{' '}
+        <Link href="/#request" className="font-bold text-accent">заполните заявку на главной</Link>.
+      </p>
     </section>
   );
 }

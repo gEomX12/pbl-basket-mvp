@@ -18,17 +18,13 @@ import {
 } from '@/lib/league-data';
 import {
   KEYS,
-  loadAccounts,
   loadAllMatches,
   loadFavorites,
-  loadSession,
   readRaw,
-  saveAccounts,
-  setSession,
   toggleFavorite as persistFavorite,
   writeRaw,
 } from '@/lib/storage';
-import type { Account, ArchivedMatch, MatchStage } from '@/types/match';
+import type { ArchivedMatch, MatchStage } from '@/types/match';
 
 /* ================================================================== */
 /*  Тема                                                               */
@@ -169,99 +165,29 @@ function LeagueProvider({ children }: { children: ReactNode }) {
 }
 
 /* ================================================================== */
-/*  Аккаунт                                                            */
+/*  Избранные команды (без аккаунта — хранятся в этом браузере)        */
 /* ================================================================== */
 
-type AuthResult = { ok: boolean; error?: string };
-
-type AuthCtx = {
-  account: Account | null;
-  ready: boolean;
-  signIn: (login: string, password: string) => AuthResult;
-  signUp: (input: Omit<Account, 'createdAt'>) => AuthResult;
-  signOut: () => void;
-  update: (patch: Partial<Account>) => void;
-  accounts: Account[];
+type FavoritesCtx = {
   favorites: string[];
   toggleFavorite: (team: string) => void;
 };
 
-const AuthContext = createContext<AuthCtx | null>(null);
+const FavoritesContext = createContext<FavoritesCtx | null>(null);
 
-export function useAuth(): AuthCtx {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth должен вызываться внутри <AppProviders>');
+export function useFavorites(): FavoritesCtx {
+  const ctx = useContext(FavoritesContext);
+  if (!ctx) throw new Error('useFavorites должен вызываться внутри <AppProviders>');
   return ctx;
 }
 
-const NO_ACCOUNTS: Account[] = [];
 const NO_FAVORITES: string[] = [];
 
-function AuthProvider({ children }: { children: ReactNode }) {
-  const accounts = useClientStore('accounts', loadAccounts, NO_ACCOUNTS);
-  const login = useClientStore<string | null>('session', loadSession, null);
+function FavoritesProvider({ children }: { children: ReactNode }) {
   const favorites = useClientStore('favorites', loadFavorites, NO_FAVORITES);
-
-  const account = useMemo(
-    () => accounts.find((item) => item.login === login) ?? null,
-    [accounts, login],
-  );
-
-  const signIn = useCallback<AuthCtx['signIn']>((value, password) => {
-    const found = loadAccounts().find(
-      (item) => item.login.toLowerCase() === value.trim().toLowerCase(),
-    );
-    if (!found) return { ok: false, error: 'Пользователь не найден' };
-    if (found.password !== password) return { ok: false, error: 'Неверный пароль' };
-    setSession(found.login);
-    return { ok: true };
-  }, []);
-
-  const signUp = useCallback<AuthCtx['signUp']>((input) => {
-    const list = loadAccounts();
-    if (list.some((item) => item.login.toLowerCase() === input.login.trim().toLowerCase())) {
-      return { ok: false, error: 'Такой логин уже занят' };
-    }
-    const created: Account = {
-      ...input,
-      login: input.login.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    saveAccounts([...list, created]);
-    setSession(created.login);
-    return { ok: true };
-  }, []);
-
-  const signOut = useCallback(() => setSession(null), []);
-
-  const update = useCallback<AuthCtx['update']>(
-    (patch) => {
-      if (!login) return;
-      saveAccounts(
-        loadAccounts().map((item) => (item.login === login ? { ...item, ...patch } : item)),
-      );
-    },
-    [login],
-  );
-
   const toggleFavorite = useCallback((team: string) => persistFavorite(team), []);
-
-  const value = useMemo<AuthCtx>(
-    () => ({
-      account,
-      ready: true,
-      signIn,
-      signUp,
-      signOut,
-      update,
-      accounts,
-      favorites,
-      toggleFavorite,
-    }),
-    [account, signIn, signUp, signOut, update, accounts, favorites, toggleFavorite],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const value = useMemo(() => ({ favorites, toggleFavorite }), [favorites, toggleFavorite]);
+  return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 }
 
 /* ================================================================== */
@@ -271,7 +197,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <HydrationGate>
       <ThemeProvider>
         <LeagueProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <FavoritesProvider>{children}</FavoritesProvider>
         </LeagueProvider>
       </ThemeProvider>
     </HydrationGate>

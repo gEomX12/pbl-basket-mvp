@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useAuth, useLeague } from '@/lib/providers';
+import { useFavorites, useLeague } from '@/lib/providers';
 import { computeStandings } from '@/lib/standings';
 import { aggregatePlayers } from '@/lib/league-stats';
 import { rosterOf, teamInfo } from '@/lib/league-data';
@@ -22,7 +22,7 @@ type Tab = 'overview' | 'roster' | 'games' | 'stats';
 
 export default function TeamView({ teamName }: { teamName: string }) {
   const { seasonMatches, allMatches, season } = useLeague();
-  const { favorites, toggleFavorite } = useAuth();
+  const { favorites, toggleFavorite } = useFavorites();
   const [tab, setTab] = useState<Tab>('overview');
 
   const info = teamInfo(teamName);

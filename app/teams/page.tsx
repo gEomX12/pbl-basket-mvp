@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useAuth, useLeague } from '@/lib/providers';
+import { useFavorites, useLeague } from '@/lib/providers';
 import { computeStandings } from '@/lib/standings';
 import { TEAMS } from '@/lib/league-data';
 import { signed } from '@/lib/format';
@@ -12,7 +12,7 @@ type View = 'grid' | 'list';
 
 export default function TeamsPage() {
   const { seasonMatches, division, season } = useLeague();
-  const { favorites, toggleFavorite } = useAuth();
+  const { favorites, toggleFavorite } = useFavorites();
   const [view, setView] = useState<View>('grid');
   const [query, setQuery] = useState('');
 
@@ -42,7 +42,7 @@ export default function TeamsPage() {
         title="Команды"
         subtitle={`${division} · сезон ${season} · команд: ${teams.length}`}
         action={
-          <Link href="/request" className={btn.ghost}>
+          <Link href="/#request" className={btn.ghost}>
             Заявить команду
           </Link>
         }

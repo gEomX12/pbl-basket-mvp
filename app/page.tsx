@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useLeague } from '@/lib/providers';
 import { computeStandings, type StandingRow } from '@/lib/standings';
 import { aggregatePlayers } from '@/lib/league-stats';
+import TeamRequestForm from '@/components/TeamRequestForm';
 import { compareText, fmtDateShort, perGame, signed } from '@/lib/format';
 import {
   Card,
@@ -65,6 +66,7 @@ export default function StandingsPage() {
   );
 
   return (
+    <>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       {/* min-w-0: иначе таблица с min-width не даёт колонке сжаться и страница едет вбок */}
       <section className="min-w-0">
@@ -249,13 +251,19 @@ export default function StandingsPage() {
         <Card className="p-4">
           <h2 className="text-sm font-black">Хотите играть в ПБЛ?</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Приём заявок на сезон открыт. Заполните форму — мы свяжемся с капитаном команды.
+            Приём заявок на сезон открыт. Капитану достаточно заполнить форму — без
+            регистрации. Мы свяжемся с вами.
           </p>
-          <Link href="/request" className={`${btn.primary} mt-3 w-full`}>
+          <a href="#request" className={`${btn.primary} mt-3 w-full`}>
             Подать заявку
-          </Link>
+          </a>
         </Card>
       </aside>
     </div>
+
+    <div className="mt-12 border-t border-line pt-10">
+      <TeamRequestForm />
+    </div>
+    </>
   );
 }

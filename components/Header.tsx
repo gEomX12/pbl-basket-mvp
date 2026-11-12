@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { Suspense, useState } from 'react';
-import { useAuth, useLeague } from '@/lib/providers';
+import { useLeague } from '@/lib/providers';
+import { signOutJudge, useJudge } from '@/lib/judge-auth';
 import GlobalSearch from '@/components/GlobalSearch';
 import BrandLogo from '@/components/BrandLogo';
 import NavLinks, { NavLinksSkeleton } from '@/components/NavLinks';
@@ -11,7 +12,8 @@ import { CONTACT_TELEGRAM_URL } from '@/components/Footer';
 
 export default function Header() {
   const { season, setSeason, seasons, division, setDivision, divisions } = useLeague();
-  const { account, signOut } = useAuth();
+  const judge = useJudge();
+  const account = judge.status === 'signed-in' ? judge.judge : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
 
@@ -103,41 +105,39 @@ export default function Header() {
                 className="flex items-center gap-2 rounded-lg border border-line px-2 py-1.5 text-xs font-bold transition hover:border-accent"
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[10px] text-accentfg">
-                  {account.displayName.slice(0, 1).toUpperCase()}
+                  {account.name.slice(0, 1).toUpperCase()}
                 </span>
-                <span className="hidden max-w-24 truncate sm:block">{account.displayName}</span>
+                <span className="hidden max-w-24 truncate sm:block">{account.name}</span>
               </button>
               {userOpen && (
                 <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
-                  <Link href={`/profile/${encodeURIComponent(account.login)}`} onClick={closeAll} className="block px-4 py-2.5 text-sm hover:bg-surface2">
-                    Страница пользователя
+                  <p className="border-b border-line px-4 py-2 text-[11px] text-muted">Судья · {account.email}</p>
+                  <Link href="/scorer" onClick={closeAll} className="block px-4 py-2.5 text-sm hover:bg-surface2">
+                    Судейский столик
                   </Link>
-                  <Link href="/settings" onClick={closeAll} className="block px-4 py-2.5 text-sm hover:bg-surface2">
-                    Настройки
-                  </Link>
-                  <Link href="/request" onClick={closeAll} className="block px-4 py-2.5 text-sm hover:bg-surface2">
-                    Подать заявку
+                  <Link href="/matches" onClick={closeAll} className="block px-4 py-2.5 text-sm hover:bg-surface2">
+                    Архив протоколов
                   </Link>
                   <button
                     type="button"
                     onClick={() => {
-                      signOut();
+                      void signOutJudge();
                       setUserOpen(false);
                     }}
                     className="block w-full border-t border-line px-4 py-2.5 text-left text-sm text-loss hover:bg-surface2"
                   >
-                    Выход из аккаунта
+                    Выйти
                   </button>
                 </div>
               )}
             </div>
           ) : (
             <Link
-              href="/login"
+              href="/#request"
               onClick={closeAll}
               className="glow-accent rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-accentfg hover:opacity-95"
             >
-              Вход
+              Подать заявку
             </Link>
           )}
         </div>
@@ -152,9 +152,14 @@ export default function Header() {
             <Suspense fallback={<NavLinksSkeleton variant="mobile" />}>
               <NavLinks variant="mobile" onNavigate={closeAll} />
             </Suspense>
-            <Link href="/request" onClick={closeAll} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-surface2">
+            <Link href="/#request" onClick={closeAll} className="rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-surface2">
               Подать заявку
             </Link>
+            {!account && (
+              <Link href="/login" onClick={closeAll} className="rounded-lg px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface2">
+                Вход для судей
+              </Link>
+            )}
             <a
               href="https://t.me/miroslawvwv"
               target="_blank"

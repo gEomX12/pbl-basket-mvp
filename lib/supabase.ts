@@ -27,7 +27,8 @@ export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured) return null;
   if (!cached) {
     cached = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
+      // Сессия судьи переживает перезагрузку столика.
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'pbl.judge-auth' },
       realtime: { params: { eventsPerSecond: 10 } },
     });
   }
@@ -38,4 +39,5 @@ export function getSupabase(): SupabaseClient | null {
 export const TABLES = {
   liveEvents: 'live_events',
   applications: 'applications',
+  judges: 'judges',
 } as const;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLeague } from '@/lib/providers';
 import { useClientStore, useHydrated } from '@/lib/client-store';
@@ -21,7 +22,16 @@ import {
 import { rebTotal } from '@/lib/league-stats';
 import { jersey, mmss, todayIso } from '@/lib/format';
 import { saveMatch } from '@/lib/storage';
-import { Card, SectionTitle, TeamBadge, btn, inputClass, labelClass } from '@/components/ui';
+import { useJudge } from '@/lib/judge-auth';
+import {
+  Card,
+  RouteFallback,
+  SectionTitle,
+  TeamBadge,
+  btn,
+  inputClass,
+  labelClass,
+} from '@/components/ui';
 import PlayByPlay from '@/components/PlayByPlay';
 import type {
   ArchivedMatch,
@@ -758,6 +768,25 @@ function ScorerDesk({
 export default function ScorerPage() {
   const hydrated = useHydrated();
   const session = useClientStore('match-session', loadMatchSession, null);
+  const judge = useJudge();
+
+  // Столик доступен только судьям. Черновик матча при этом не трогаем:
+  // после входа судья продолжит с того же места.
+  if (judge.status === 'loading') return <RouteFallback />;
+  if (judge.status === 'signed-out') {
+    return (
+      <section className="mx-auto max-w-md">
+        <SectionTitle title="Судейский столик" subtitle="Доступ только для судей лиги" />
+        <Card className="space-y-3 p-5">
+          <p className="text-sm text-muted">
+            Войдите под аккаунтом судьи, чтобы вести протокол матча. Смотреть игры
+            можно без входа — в трансляции и на странице матча.
+          </p>
+          <Link href="/login" className={`${btn.primary} w-full`}>Вход для судей</Link>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <ScorerDesk

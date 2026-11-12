@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useJudge } from '@/lib/judge-auth';
 
 export const NAV = [
   { href: '/', label: 'Таблица' },
@@ -9,8 +10,10 @@ export const NAV = [
   { href: '/teams', label: 'Команды' },
   { href: '/leaders', label: 'Лидеры' },
   { href: '/compare', label: 'Сравнение' },
-  { href: '/scorer', label: 'Столик' },
 ] as const;
+
+/** Видна только вошедшему судье. */
+const JUDGE_NAV = { href: '/scorer', label: 'Столик' } as const;
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
@@ -32,6 +35,8 @@ export default function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname() ?? '/';
+  const judge = useJudge();
+  const items = judge.status === 'signed-in' ? [...NAV, JUDGE_NAV] : NAV;
 
   const base =
     variant === 'desktop'
@@ -43,7 +48,7 @@ export default function NavLinks({
 
   return (
     <>
-      {NAV.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.href}
           href={item.href}

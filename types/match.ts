@@ -62,24 +62,6 @@ export interface ArchivedMatch {
   away: TeamState;
 }
 
-export type ProfileRole = 'scorer' | 'coach' | 'fan';
-
-export interface UserProfile {
-  displayName: string;
-  role: ProfileRole;
-  club: string;
-}
-
-export interface Account {
-  login: string;
-  password: string;
-  displayName: string;
-  role: ProfileRole;
-  club: string;
-  favoriteTeam: string;
-  createdAt: string;
-}
-
 export interface TeamRequest {
   id: string;
   createdAt: string;

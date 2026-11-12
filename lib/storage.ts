@@ -1,9 +1,11 @@
 import { notify } from '@/lib/client-store';
-import { DEFAULT_PROFILE, SEED_MATCHES } from '@/lib/league-data';
-import type { Account, ArchivedMatch, TeamRequest, UserProfile } from '@/types/match';
+import { SEED_MATCHES } from '@/lib/league-data';
+import type { ArchivedMatch, TeamRequest } from '@/types/match';
 
 export const KEYS = {
   matches: 'pbl.matches',
+  // Устаревшие ключи старых локальных аккаунтов: больше не используются,
+  // но остаются здесь, чтобы «Сбросить локальные данные» их удалял.
   profile: 'pbl.profile',
   accounts: 'pbl.accounts',
   session: 'pbl.session',
@@ -75,34 +77,6 @@ export function loadAllMatches(): ArchivedMatch[] {
   if (stored.length === 0) return SEED_MATCHES;
   const storedIds = new Set(stored.map((match) => match.id));
   return [...stored, ...SEED_MATCHES.filter((match) => !storedIds.has(match.id))];
-}
-
-/* ---------------------------- Профиль ---------------------------- */
-
-export function loadProfile(): UserProfile {
-  return readJson<UserProfile>(KEYS.profile) ?? { ...DEFAULT_PROFILE };
-}
-
-export function saveProfile(profile: UserProfile): void {
-  writeJson(KEYS.profile, profile);
-}
-
-/* -------------------------- Аккаунты ----------------------------- */
-
-export function loadAccounts(): Account[] {
-  return readJson<Account[]>(KEYS.accounts) ?? [];
-}
-
-export function saveAccounts(accounts: Account[]): void {
-  writeJson(KEYS.accounts, accounts);
-}
-
-export function loadSession(): string | null {
-  return readRaw(KEYS.session);
-}
-
-export function setSession(login: string | null): void {
-  writeRaw(KEYS.session, login);
 }
 
 /* --------------------------- Заявки ------------------------------ */

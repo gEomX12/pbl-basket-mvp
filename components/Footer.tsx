@@ -19,8 +19,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: 'Участникам',
     links: [
-      { href: '/request', label: 'Подать заявку' },
-      { href: '/scorer', label: 'Судейский столик' },
+      { href: '/#request', label: 'Подать заявку' },
+      { href: '/login', label: 'Вход для судей' },
       { href: '/matches', label: 'Архив матчей' },
       { href: '/settings', label: 'Настройки' },
     ],
