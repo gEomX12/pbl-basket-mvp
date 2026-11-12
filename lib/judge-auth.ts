@@ -174,7 +174,12 @@ export async function signInJudge(email: string, password: string): Promise<Sign
   const login = email.trim().toLowerCase();
 
   if (judgeAuthMode === 'disabled') {
-    return { ok: false, error: 'Вход для судей пока не настроен. Обратитесь к администратору лиги.' };
+    return {
+      ok: false,
+      error:
+        'Supabase не подключён: при сборке не заданы NEXT_PUBLIC_SUPABASE_URL и ' +
+        'NEXT_PUBLIC_SUPABASE_ANON_KEY. Добавьте их в окружение хостинга и пересоберите сайт.',
+    };
   }
 
   if (judgeAuthMode === 'demo') {

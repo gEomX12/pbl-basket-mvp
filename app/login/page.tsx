@@ -67,56 +67,48 @@ export default function LoginPage() {
         subtitle="Доступ к судейскому столику. Аккаунты судьям выдаёт администратор лиги."
       />
 
-      {judgeAuthMode === 'disabled' ? (
-        <Card className="p-5">
-          <p className="text-sm text-muted">
-            Вход для судей пока не настроен. Обратитесь к администратору лиги.
-          </p>
+      <form onSubmit={submit} noValidate>
+        <Card className="space-y-4 p-5">
+          <label className="block space-y-1.5">
+            <span className={labelClass}>E-mail</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className={inputClass}
+              autoComplete="username"
+              inputMode="email"
+              placeholder="judge@example.com"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className={labelClass}>Пароль</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className={inputClass}
+              autoComplete="current-password"
+            />
+          </label>
+
+          {error && (
+            <p className="rounded-lg bg-loss/10 px-3 py-2 text-xs font-bold text-loss">{error}</p>
+          )}
+
+          <button type="submit" disabled={sending} className={`${btn.primary} w-full`}>
+            {sending ? 'Входим…' : 'Войти'}
+          </button>
+
+          {judgeAuthMode === 'demo' && (
+            <p className="rounded-lg bg-surface2 px-3 py-2 text-[11px] text-muted">
+              Режим разработки без Supabase: демо-вход{' '}
+              <b className="text-fg">{DEMO_JUDGE.email}</b> / <b className="text-fg">{DEMO_JUDGE.password}</b>
+            </p>
+          )}
         </Card>
-      ) : (
-        <form onSubmit={submit} noValidate>
-          <Card className="space-y-4 p-5">
-            <label className="block space-y-1.5">
-              <span className={labelClass}>E-mail</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className={inputClass}
-                autoComplete="username"
-                inputMode="email"
-                placeholder="judge@example.com"
-              />
-            </label>
-
-            <label className="block space-y-1.5">
-              <span className={labelClass}>Пароль</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className={inputClass}
-                autoComplete="current-password"
-              />
-            </label>
-
-            {error && (
-              <p className="rounded-lg bg-loss/10 px-3 py-2 text-xs font-bold text-loss">{error}</p>
-            )}
-
-            <button type="submit" disabled={sending} className={`${btn.primary} w-full`}>
-              {sending ? 'Входим…' : 'Войти'}
-            </button>
-
-            {judgeAuthMode === 'demo' && (
-              <p className="rounded-lg bg-surface2 px-3 py-2 text-[11px] text-muted">
-                Режим разработки без Supabase: демо-вход{' '}
-                <b className="text-fg">{DEMO_JUDGE.email}</b> / <b className="text-fg">{DEMO_JUDGE.password}</b>
-              </p>
-            )}
-          </Card>
-        </form>
-      )}
+      </form>
 
       <p className="mt-6 text-center text-xs text-muted">
         Хотите заявить команду? Регистрация не нужна —{' '}
