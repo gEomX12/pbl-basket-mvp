@@ -35,6 +35,8 @@ export interface MatchDeskDraft {
   timeLeft: number;
   possession: Side | null;
   selectedId: string | null;
+  /** Выбранный игрок в каждой команде (у каждой команды свои кнопки). */
+  selected?: Record<Side, string | null>;
   history: string[];
 }
 
